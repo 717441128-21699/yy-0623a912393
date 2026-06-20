@@ -1,0 +1,96 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+  transition: box-shadow $transition-base;
+
+  &:active {
+    box-shadow: $shadow-card-hover;
+  }
+}
+
+.imageWrap {
+  position: relative;
+  width: 100%;
+  height: 280rpx;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+}
+
+.marksIndicator {
+  position: absolute;
+  top: $spacing-sm;
+  right: $spacing-sm;
+  background-color: rgba(244, 67, 54, 0.9);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+}
+
+.categoryTag {
+  position: absolute;
+  bottom: $spacing-sm;
+  left: $spacing-sm;
+  background-color: rgba(30, 136, 229, 0.9);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.content {
+  padding: $spacing-md;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.location {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.time {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.description {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.5;
+  @include text-ellipsis-multi(2);
+}
+
+.marksList {
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 2rpx solid $color-divider;
+}
+
+.markItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-bottom: 4rpx;
+
+  &::before {
+    content: '●';
+    color: $color-error;
+    font-size: 16rpx;
+  }
+}

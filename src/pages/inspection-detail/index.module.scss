@@ -1,0 +1,172 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: $spacing-lg;
+}
+
+.content {
+  padding: $spacing-lg;
+}
+
+.basicInfo {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.infoLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  text-align: right;
+  flex: 1;
+  margin-left: $spacing-md;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 2rpx solid $color-divider;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.resultsSection {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.resultItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-md 0;
+  border-bottom: 2rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.resultName {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.resultValue {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.measuredValue {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+
+  &.passed {
+    color: $color-success;
+  }
+
+  &.failed {
+    color: $color-error;
+  }
+}
+
+.resultIcon {
+  font-size: $font-size-md;
+
+  &.passed {
+    color: $color-success;
+  }
+
+  &.failed {
+    color: $color-error;
+  }
+}
+
+.remarkSection {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.remarkText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
+.emptyRemark {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  font-style: italic;
+}
+
+.summaryBanner {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  color: $color-text-white;
+}
+
+.summaryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-sm;
+}
+
+.summaryStats {
+  display: flex;
+  gap: $spacing-lg;
+}
+
+.summaryStat {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.summaryStatValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+}
+
+.summaryStatLabel {
+  font-size: $font-size-xs;
+  opacity: 0.9;
+}

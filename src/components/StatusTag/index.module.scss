@@ -1,0 +1,69 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.passed {
+  background-color: $color-bg-tag-success;
+  color: $color-success;
+}
+
+.failed {
+  background-color: $color-bg-tag-error;
+  color: $color-error;
+}
+
+.serious {
+  background-color: $color-bg-tag-error;
+  color: $color-serious;
+}
+
+.general {
+  background-color: $color-bg-tag-warning;
+  color: $color-general;
+}
+
+.minor {
+  background-color: rgba(255, 193, 7, 0.15);
+  color: $color-minor;
+}
+
+.pending {
+  background-color: $color-bg-tag-error;
+  color: $color-error;
+}
+
+.processing {
+  background-color: $color-bg-tag-warning;
+  color: $color-warning;
+}
+
+.reviewed {
+  background-color: $color-bg-tag;
+  color: $color-primary;
+}
+
+.closed {
+  background-color: $color-bg-tag-success;
+  color: $color-success;
+}
+
+.lg {
+  padding: 8rpx 24rpx;
+  font-size: $font-size-sm;
+  border-radius: $radius-sm;
+}
+
+.sm {
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+}
