@@ -88,6 +88,37 @@
   gap: $spacing-md;
 }
 
+.gridItem {
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background-color: $color-bg-page;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.95;
+    transform: scale(0.98);
+  }
+}
+
+.gridItemMeta {
+  padding: $spacing-sm;
+  background-color: $color-bg-card;
+}
+
+.gridItemCategory {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.gridItemLocation {
+  display: block;
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 2rpx;
+}
+
 .emptyState {
   text-align: center;
   padding: $spacing-xl * 2 $spacing-lg;

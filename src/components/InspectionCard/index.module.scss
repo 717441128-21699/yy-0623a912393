@@ -219,3 +219,37 @@
   color: $color-primary;
   font-weight: $font-weight-medium;
 }
+
+.photoAction {
+  margin-top: $spacing-sm;
+  padding: $spacing-md;
+  background-color: $color-bg-tag-error;
+  border-radius: $radius-sm;
+  border: 2rpx solid rgba(244, 67, 54, 0.2);
+}
+
+.photoBtn {
+  @include button-reset;
+  height: 72rpx;
+  border-radius: $radius-sm;
+  background: linear-gradient(135deg, $color-error 0%, #FF6B6B 100%);
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  width: 100%;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.photoHint {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-error;
+  opacity: 0.8;
+  text-align: center;
+}

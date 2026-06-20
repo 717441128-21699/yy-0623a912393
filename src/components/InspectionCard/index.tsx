@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
-import { View, Text, Image, Input, Textarea } from '@tarojs/components'
+import { View, Text, Image, Input, Textarea, Button } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import classnames from 'classnames'
 import { InspectionItemStandard, InspectionResult } from '@/types'
 import styles from './index.module.scss'
@@ -9,9 +10,10 @@ interface InspectionCardProps {
   result?: InspectionResult
   onChange: (result: InspectionResult) => void
   showDetail?: boolean
+  inspectionId?: string
 }
 
-const InspectionCard: React.FC<InspectionCardProps> = ({ standard, result, onChange, showDetail = true }) => {
+const InspectionCard: React.FC<InspectionCardProps> = ({ standard, result, onChange, showDetail = true, inspectionId }) => {
   const [isFocused, setIsFocused] = useState(false)
   const [expanded, setExpanded] = useState(true)
   const [inputValue, setInputValue] = useState(result?.measuredValue?.toString() || '')
@@ -49,9 +51,28 @@ const InspectionCard: React.FC<InspectionCardProps> = ({ standard, result, onCha
     })
   }, [standard, inputValue, onChange])
 
+  const handleTakePhoto = useCallback(() => {
+    Taro.chooseImage({
+      count: 1,
+      sourceType: ['camera', 'album'],
+      success: (res) => {
+        const tempPath = res.tempFilePaths[0]
+        const params = new URLSearchParams({
+          tempPath,
+          itemId: standard.id,
+          inspectionId: inspectionId || ''
+        })
+        Taro.navigateTo({
+          url: `/pages/photo-mark/index?${params.toString()}`
+        })
+      }
+    })
+  }, [standard.id, inspectionId])
+
   const hasValue = inputValue !== ''
   const numValue = parseFloat(inputValue)
   const isQualified = hasValue && !isNaN(numValue) && numValue >= standard.minValue && numValue <= standard.maxValue
+  const isFailed = hasValue && !isNaN(numValue) && !isQualified
 
   const getInputStatus = () => {
     if (!hasValue) return ''
@@ -116,6 +137,15 @@ const InspectionCard: React.FC<InspectionCardProps> = ({ standard, result, onCha
           </View>
         </View>
       </View>
+
+      {isFailed && (
+        <View className={styles.photoAction}>
+          <Button className={styles.photoBtn} onClick={handleTakePhoto}>
+            📷 拍照取证
+          </Button>
+          <Text className={styles.photoHint}>发现不合格项，建议拍照留证</Text>
+        </View>
+      )}
 
       {!expanded && showDetail && (
         <View className={styles.collapsedContent}>

@@ -28,6 +28,8 @@ export interface InspectionResult {
 export interface PhotoRecord {
   id: string
   inspectionId: string
+  rectificationId: string
+  itemId: string
   url: string
   thumbnail: string
   category: 'node' | 'fastener' | 'pad' | 'jack' | 'other'

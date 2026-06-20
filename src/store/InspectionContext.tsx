@@ -141,7 +141,16 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
     const severityInfo: Record<string, SeverityResult> = {}
     const items: RectificationItem[] = []
 
-    failedItems.forEach((result, idx) => {
+    const itemPhotosMap = new Map<string, string[]>()
+    photoRecords.forEach(p => {
+      if (p.itemId) {
+        const existing = itemPhotosMap.get(p.itemId) || []
+        existing.push(p.id)
+        itemPhotosMap.set(p.itemId, existing)
+      }
+    })
+
+    failedItems.forEach((result) => {
       const standard = itemStandards.find(s => s.id === result.itemId)
       if (!standard) return
 
@@ -163,7 +172,7 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
         `合格范围${standard.qualifiedRange}${standard.unit}，${direction}规范要求。${deviationText}` +
         `${result.remark ? ' 备注：' + result.remark : ''}`
 
-      const itemPhotos = photoIds.length > 0 ? [photoIds[idx % photoIds.length]] : []
+      const matchedPhotos = itemPhotosMap.get(result.itemId) || []
 
       const item: RectificationItem = {
         id: generateId('rect-'),
@@ -173,7 +182,7 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
         severity: severity.severity,
         severityName: severity.severityName,
         location: { ...location },
-        photos: itemPhotos,
+        photos: matchedPhotos,
         isSuspend: severity.isSuspend,
         needTechReview: severity.needTechReview,
         status: 'pending',
@@ -188,7 +197,7 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
     })
 
     return { items, severityInfo }
-  }, [itemStandards])
+  }, [itemStandards, photoRecords])
 
   const getLocationText = (location: { building: string; floor: string; area: string }): string => {
     const { building, floor, area } = location

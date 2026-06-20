@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { View, Text, Image, Input, Textarea, Button, Picker } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
@@ -22,6 +22,7 @@ const PhotoMarkPage: React.FC = () => {
   const tempPath = router.params.tempPath || ''
   const fromInspectionId = router.params.inspectionId || ''
   const fromRectificationId = router.params.rectificationId || ''
+  const fromItemId = router.params.itemId || ''
 
   const [marks, setMarks] = useState<PhotoMark[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('node')
@@ -31,6 +32,10 @@ const PhotoMarkPage: React.FC = () => {
   const [currentMarkText, setCurrentMarkText] = useState('')
   const [linkInspectionId, setLinkInspectionId] = useState<string>('')
   const [linkRectificationId, setLinkRectificationId] = useState<string>('')
+  const [linkItemId, setLinkItemId] = useState<string>('')
+
+  const imageWrapperRef = useRef<any>(null)
+  const [imageLayout, setImageLayout] = useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
 
   useEffect(() => {
     if (currentLocation.building || currentLocation.floor || currentLocation.area) {
@@ -48,7 +53,10 @@ const PhotoMarkPage: React.FC = () => {
         setLocation({ ...rect.location })
       }
     }
-  }, [currentLocation, fromInspectionId, fromRectificationId, getCurrentInspectionId, rectificationItems])
+    if (fromItemId) {
+      setLinkItemId(fromItemId)
+    }
+  }, [currentLocation, fromInspectionId, fromRectificationId, fromItemId, getCurrentInspectionId, rectificationItems])
 
   const linkedInspectionInfo = useMemo(() => {
     if (!linkInspectionId) return null
@@ -75,20 +83,33 @@ const PhotoMarkPage: React.FC = () => {
     return rectificationItems.filter(r => r.inspectionId === linkInspectionId)
   }, [linkInspectionId, rectificationItems])
 
-  const handleImageClick = useCallback((e: any) => {
+  const handleImageLayout = useCallback((e: any) => {
+    const { width, height, left, top } = e.detail || {}
+    if (width && height) {
+      setImageLayout({ width, height, offsetX: left || 0, offsetY: top || 0 })
+    }
+  }, [])
+
+  const handleImageTap = useCallback((e: any) => {
     if (!isAddingMark) return
 
-    const rect = e.currentTarget.getBoundingClientRect?.() || { width: 375, height: 500 }
-    const detailX = e.detail?.x ?? (e.touches?.[0]?.clientX ?? 0)
-    const detailY = e.detail?.y ?? (e.touches?.[0]?.clientY ?? 0)
-    const x = Math.max(5, Math.min(95, (detailX / rect.width) * 100))
-    const y = Math.max(5, Math.min(95, (detailY / rect.height) * 100))
+    const tapX = e.detail?.x ?? e.detail?.clientX ?? 0
+    const tapY = e.detail?.y ?? e.detail?.clientY ?? 0
+
+    const { width, height, offsetX, offsetY } = imageLayout
+    const containerWidth = width || 375
+    const containerHeight = height || 500
+
+    const relativeX = tapX - offsetX
+    const relativeY = tapY - offsetY
+    const xPercent = Math.max(5, Math.min(95, (relativeX / containerWidth) * 100))
+    const yPercent = Math.max(5, Math.min(95, (relativeY / containerHeight) * 100))
 
     if (currentMarkText.trim()) {
       const newMark: PhotoMark = {
         id: generateId('mark-'),
-        x,
-        y,
+        x: xPercent,
+        y: yPercent,
         text: currentMarkText.trim()
       }
       setMarks(prev => [...prev, newMark])
@@ -98,7 +119,7 @@ const PhotoMarkPage: React.FC = () => {
     } else {
       Taro.showToast({ title: '请先输入标注内容', icon: 'none' })
     }
-  }, [isAddingMark, currentMarkText])
+  }, [isAddingMark, currentMarkText, imageLayout])
 
   const handleDeleteMark = (markId: string) => {
     Taro.showModal({
@@ -124,11 +145,12 @@ const PhotoMarkPage: React.FC = () => {
     }
 
     const categoryInfo = photoCategories.find(c => c.value === selectedCategory)
-    
+
     const photoRecord = {
       id: generateId('photo-'),
       inspectionId: linkInspectionId,
       rectificationId: linkRectificationId,
+      itemId: linkItemId,
       url: tempPath,
       thumbnail: tempPath,
       category: selectedCategory as any,
@@ -151,7 +173,7 @@ const PhotoMarkPage: React.FC = () => {
         updateRectificationItem(updated)
       }
     }
-    
+
     Taro.showToast({ title: '保存成功', icon: 'success' })
     setTimeout(() => {
       Taro.navigateBack()
@@ -177,23 +199,43 @@ const PhotoMarkPage: React.FC = () => {
 
   return (
     <View className={styles.page}>
-      <View className={styles.imageContainer}>
-        <Image
-          className={styles.image}
-          src={tempPath}
-          mode='widthFix'
-        />
+      <View
+        className={styles.imageContainer}
+        ref={imageWrapperRef}
+      >
+        {tempPath ? (
+          <Image
+            className={styles.image}
+            src={tempPath}
+            mode='widthFix'
+            onLoad={handleImageLayout}
+            onClick={handleImageTap}
+          />
+        ) : (
+          <View className={styles.noPhoto}>
+            <Text className={styles.noPhotoIcon}>📷</Text>
+            <Text className={styles.noPhotoText}>暂无照片，请从拍照记录页进入</Text>
+          </View>
+        )}
         {marks.map((mark, index) => (
           <View key={mark.id}>
             <View
               className={styles.markDot}
               style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-            />
-            <View
-              className={styles.markTooltip}
-              style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
+              onClick={(e) => { e.stopPropagation() }}
             >
-              {index + 1}. {mark.text}
+              <Text className={styles.markIndex}>{index + 1}</Text>
+            </View>
+            <View
+              className={styles.markLabel}
+              style={{
+                left: `${mark.x}%`,
+                top: `${mark.y}%`,
+                transform: mark.x > 60 ? 'translate(-100%, -160%)' : 'translate(10%, -160%)'
+              }}
+              onClick={(e) => { e.stopPropagation() }}
+            >
+              <Text className={styles.markLabelText}>{index + 1}. {mark.text}</Text>
               <Text
                 className={styles.deleteBtn}
                 onClick={(e) => {
@@ -201,23 +243,19 @@ const PhotoMarkPage: React.FC = () => {
                   handleDeleteMark(mark.id)
                 }}
               >
-                删除
+                ✕
               </Text>
             </View>
           </View>
         ))}
         {isAddingMark && (
-          <Text className={styles.hint}>点击图片添加标注点</Text>
-        )}
-        {!tempPath && (
-          <View className={styles.noPhoto}>
-            <Text className={styles.noPhotoIcon}>📷</Text>
-            <Text className={styles.noPhotoText}>暂无照片，请从拍照记录页进入</Text>
+          <View className={styles.hintBar}>
+            <Text className={styles.hintText}>👆 点击图片上问题位置添加标注</Text>
           </View>
         )}
       </View>
 
-      <View className={styles.toolbar}>
+      <ScrollView className={styles.toolbar} scrollY>
         <Text className={styles.toolbarTitle}>照片信息</Text>
 
         <View className={styles.linkSection}>
@@ -355,23 +393,40 @@ const PhotoMarkPage: React.FC = () => {
 
         <View className={styles.inputSection}>
           <Text className={styles.inputLabel}>添加标注</Text>
-          <Input
-            className={styles.input}
-            placeholder='输入标注内容，然后点击图片'
-            value={currentMarkText}
-            onInput={(e) => setCurrentMarkText(e.detail.value)}
-            maxlength={50}
-          />
-          <Button
-            className={classnames(
-              styles.btn,
-              isAddingMark ? styles.btnSecondary : styles.btnPrimary
-            )}
-            style={{ marginTop: '16rpx', height: '64rpx' }}
-            onClick={() => setIsAddingMark(!isAddingMark)}
-          >
-            {isAddingMark ? '取消标注' : '开始标注'}
-          </Button>
+          <View className={styles.markInputRow}>
+            <Input
+              className={styles.markInput}
+              placeholder='输入标注内容'
+              value={currentMarkText}
+              onInput={(e) => setCurrentMarkText(e.detail.value)}
+              maxlength={50}
+              onConfirm={() => {
+                if (currentMarkText.trim()) {
+                  setIsAddingMark(true)
+                }
+              }}
+            />
+            <Button
+              className={classnames(
+                styles.markBtn,
+                isAddingMark ? styles.markBtnActive : styles.markBtnNormal
+              )}
+              onClick={() => {
+                if (!currentMarkText.trim()) {
+                  Taro.showToast({ title: '请先输入标注内容', icon: 'none' })
+                  return
+                }
+                setIsAddingMark(!isAddingMark)
+              }}
+            >
+              {isAddingMark ? '取消' : '标注'}
+            </Button>
+          </View>
+          {isAddingMark && (
+            <View className={styles.markHint}>
+              <Text className={styles.markHintText}>👆 已开启标注模式，请在上方图片上点击问题位置</Text>
+            </View>
+          )}
         </View>
 
         {marks.length > 0 && (
@@ -379,7 +434,10 @@ const PhotoMarkPage: React.FC = () => {
             <Text className={styles.inputLabel}>已添加标注（{marks.length}处）</Text>
             {marks.map((mark, index) => (
               <View key={mark.id} className={styles.markListItem}>
-                <Text className={styles.markListText}>{index + 1}. {mark.text}</Text>
+                <View className={styles.markListDot}>
+                  <Text className={styles.markListDotText}>{index + 1}</Text>
+                </View>
+                <Text className={styles.markListText}>{mark.text}</Text>
                 <Button
                   className={styles.deleteMarkBtn}
                   onClick={() => handleDeleteMark(mark.id)}
@@ -420,7 +478,7 @@ const PhotoMarkPage: React.FC = () => {
             保存
           </Button>
         </View>
-      </View>
+      </ScrollView>
     </View>
   )
 }

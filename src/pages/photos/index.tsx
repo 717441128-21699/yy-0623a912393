@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
 import { PhotoRecord } from '@/types'
-import PhotoCard from '@/components/PhotoCard'
 import { photoCategories } from '@/data/inspectionItems'
 import { formatDateTime, getLocationText } from '@/utils'
+import AnnotatedPhoto from '@/components/AnnotatedPhoto'
 import styles from './index.module.scss'
 
 const PhotosPage: React.FC = () => {
@@ -14,7 +14,6 @@ const PhotosPage: React.FC = () => {
 
   const [activeFilter, setActiveFilter] = useState<string>('all')
   const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
-  const [activeMark, setActiveMark] = useState<string | null>(null)
 
   const filteredPhotos = useMemo(() => {
     if (activeFilter === 'all') return photoRecords
@@ -22,9 +21,6 @@ const PhotosPage: React.FC = () => {
   }, [activeFilter, photoRecords])
 
   const photosWithMarks = photoRecords.filter(p => p.marks.length > 0).length
-  const photosToday = photoRecords.filter(p => 
-    p.createTime.startsWith(new Date().toISOString().split('T')[0])
-  ).length
 
   const handleTakePhoto = () => {
     Taro.chooseImage({
@@ -40,11 +36,6 @@ const PhotosPage: React.FC = () => {
 
   const handleViewPhoto = (photo: PhotoRecord) => {
     setViewingPhoto(photo)
-    setActiveMark(null)
-  }
-
-  const handleMarkClick = (markId: string) => {
-    setActiveMark(activeMark === markId ? null : markId)
   }
 
   const filters = [
@@ -70,10 +61,6 @@ const PhotosPage: React.FC = () => {
           <View className={styles.statItem}>
             <Text className={styles.statValue}>{photosWithMarks}</Text>
             <Text className={styles.statLabel}>标注照片</Text>
-          </View>
-          <View className={styles.statItem}>
-            <Text className={styles.statValue}>{photosToday}</Text>
-            <Text className={styles.statLabel}>今日上传</Text>
           </View>
         </View>
       </View>
@@ -102,11 +89,18 @@ const PhotosPage: React.FC = () => {
         ) : (
           <View className={styles.photoGrid}>
             {filteredPhotos.map(photo => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onClick={() => handleViewPhoto(photo)}
-              />
+              <View key={photo.id} className={styles.gridItem} onClick={() => handleViewPhoto(photo)}>
+                <AnnotatedPhoto
+                  photo={photo}
+                  mode='thumb'
+                  showMarks={true}
+                  showMeta={false}
+                />
+                <View className={styles.gridItemMeta}>
+                  <Text className={styles.gridItemCategory}>{photo.categoryName}</Text>
+                  <Text className={styles.gridItemLocation}>{getLocationText(photo.location)}</Text>
+                </View>
+              </View>
             ))}
           </View>
         )}
@@ -134,28 +128,12 @@ const PhotosPage: React.FC = () => {
           </View>
           
           <View className={styles.modalBody} onClick={e => e.stopPropagation()}>
-            <Image
-              className={styles.largeImage}
-              src={viewingPhoto.url}
-              mode='widthFix'
+            <AnnotatedPhoto
+              photo={viewingPhoto}
+              mode='full'
+              showMarks={true}
+              showMeta={true}
             />
-            {viewingPhoto.marks.map((mark, index) => (
-              <View key={mark.id}>
-                <View
-                  className={styles.markDot}
-                  style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-                  onClick={() => handleMarkClick(mark.id)}
-                />
-                {(activeMark === mark.id || viewingPhoto.marks.length <= 3) && (
-                  <View
-                    className={styles.markTooltip}
-                    style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-                  >
-                    {index + 1}. {mark.text}
-                  </View>
-                )}
-              </View>
-            ))}
           </View>
 
           <View className={styles.modalFooter} onClick={e => e.stopPropagation()}>
@@ -172,20 +150,10 @@ const PhotosPage: React.FC = () => {
                 <Text className={styles.infoLabel}>拍摄时间</Text>
                 <Text className={styles.infoValue}>{formatDateTime(viewingPhoto.createTime)}</Text>
               </View>
-              <View className={styles.infoRow}>
-                <Text className={styles.infoLabel}>描述</Text>
-                <Text className={styles.infoValue}>{viewingPhoto.description}</Text>
-              </View>
-              
-              {viewingPhoto.marks.length > 0 && (
-                <View className={styles.marksList}>
-                  <Text className={styles.marksTitle}>问题标注（{viewingPhoto.marks.length}处）</Text>
-                  {viewingPhoto.marks.map((mark, index) => (
-                    <View key={mark.id} className={styles.markItem}>
-                      <Text className={styles.markIndex}>{index + 1}</Text>
-                      <Text className={styles.markText}>{mark.text}</Text>
-                    </View>
-                  ))}
+              {viewingPhoto.description && (
+                <View className={styles.infoRow}>
+                  <Text className={styles.infoLabel}>描述</Text>
+                  <Text className={styles.infoValue}>{viewingPhoto.description}</Text>
                 </View>
               )}
             </View>

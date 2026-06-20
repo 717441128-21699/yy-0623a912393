@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { View, Text, ScrollView, Button, Image, Textarea } from '@tarojs/components'
+import { View, Text, ScrollView, Button, Textarea } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
 import { RectificationItem, ReviewRecord, PhotoRecord } from '@/types'
 import StatusTag from '@/components/StatusTag'
+import AnnotatedPhoto from '@/components/AnnotatedPhoto'
 import { getLocationText, formatDateTime, generateId, getCurrentDateTime } from '@/utils'
 import styles from './index.module.scss'
 
@@ -21,22 +22,16 @@ const RectificationDetailPage: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewResult, setReviewResult] = useState<'pass' | 'fail'>('pass')
   const [reviewRemark, setReviewRemark] = useState('')
-  const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null)
+  const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
 
   const actualPhotos = useMemo(() => {
     if (!item) return []
-    const directPhotos = getPhotosByIds(item.photos || [])
-    const additionalPhotos = item.inspectionId
-      ? photoRecords.filter(p => p.inspectionId === item.inspectionId)
-      : []
-    const allPhotos = [...directPhotos]
-    additionalPhotos.forEach(p => {
-      if (!allPhotos.find(ap => ap.id === p.id)) {
-        allPhotos.push(p)
-      }
-    })
-    return allPhotos
-  }, [item, getPhotosByIds, photoRecords])
+    const photoIds = item.photos || []
+    if (photoIds.length > 0) {
+      return getPhotosByIds(photoIds)
+    }
+    return []
+  }, [item, getPhotosByIds])
 
   useEffect(() => {
     const id = router.params.id
@@ -45,10 +40,7 @@ const RectificationDetailPage: React.FC = () => {
       if (found) {
         setItem(found)
       } else {
-        Taro.showToast({
-          title: '记录不存在',
-          icon: 'none'
-        })
+        Taro.showToast({ title: '记录不存在', icon: 'none' })
       }
     }
   }, [router.params.id, rectificationItems])
@@ -104,25 +96,20 @@ const RectificationDetailPage: React.FC = () => {
   }
 
   const handleTakePhoto = () => {
+    if (!item) return
     Taro.chooseImage({
       count: 1,
       sourceType: ['camera'],
       success: (res) => {
-        const rectId = router.params.id
         Taro.navigateTo({
-          url: `/pages/photo-mark/index?tempPath=${res.tempFilePaths[0]}&rectificationId=${rectId}`
+          url: `/pages/photo-mark/index?tempPath=${encodeURIComponent(res.tempFilePaths[0])}&rectificationId=${item.id}&inspectionId=${item.inspectionId}&itemId=${item.itemName}`
         })
       }
     })
   }
 
-  const handleViewPhoto = (index: number) => {
-    const photos = actualPhotos
-    if (photos.length === 0) return
-    Taro.previewImage({
-      urls: photos.map(p => p.url),
-      current: photos[index].url
-    })
+  const handleViewPhoto = (photo: PhotoRecord) => {
+    setViewingPhoto(viewingPhoto?.id === photo.id ? null : photo)
   }
 
   if (!item) {
@@ -193,10 +180,7 @@ const RectificationDetailPage: React.FC = () => {
         <View className={styles.infoCard}>
           <View className={styles.sectionHeaderRow}>
             <Text className={styles.sectionTitle}>问题照片（{actualPhotos.length}张）</Text>
-            <Button
-              className={styles.takePhotoBtn}
-              onClick={handleTakePhoto}
-            >
+            <Button className={styles.takePhotoBtn} onClick={handleTakePhoto}>
               + 补充拍照
             </Button>
           </View>
@@ -207,37 +191,15 @@ const RectificationDetailPage: React.FC = () => {
             </View>
           ) : (
             <View className={styles.photosGrid}>
-              {actualPhotos.map((photo, index) => (
-                <View
-                  key={photo.id}
-                  className={styles.photoCard}
-                  onClick={() => handleViewPhoto(index)}
-                >
-                  <Image
-                    className={styles.photoThumb}
-                    src={photo.thumbnail || photo.url}
-                    mode='aspectFill'
+              {actualPhotos.map((photo) => (
+                <View key={photo.id} className={styles.photoItem}>
+                  <AnnotatedPhoto
+                    photo={photo}
+                    mode={viewingPhoto?.id === photo.id ? 'full' : 'thumb'}
+                    showMarks={true}
+                    showMeta={true}
+                    onClick={() => handleViewPhoto(photo)}
                   />
-                  {photo.marks && photo.marks.length > 0 && (
-                    <View className={styles.marksCountBadge}>
-                      <Text>{photo.marks.length}标注</Text>
-                    </View>
-                  )}
-                  <View className={styles.photoMeta}>
-                    <Text className={styles.photoCategory}>{photo.categoryName}</Text>
-                  </View>
-                  {photo.marks && photo.marks.length > 0 && (
-                    <View className={styles.marksPreview}>
-                      {photo.marks.slice(0, 2).map((mark, idx) => (
-                        <Text key={mark.id} className={styles.markPreviewItem}>
-                          • {idx + 1}. {mark.text}
-                        </Text>
-                      ))}
-                      {photo.marks.length > 2 && (
-                        <Text className={styles.markMore}>...等{photo.marks.length}处</Text>
-                      )}
-                    </View>
-                  )}
                 </View>
               ))}
             </View>
@@ -267,18 +229,8 @@ const RectificationDetailPage: React.FC = () => {
                     {review.result === 'pass' ? '✓ 通过' : '✗ 未通过'}
                   </Text>
                 </View>
-                <Text className={styles.reviewRemark}>{review.remark}</Text>
-                {review.photos.length > 0 && (
-                  <View className={styles.reviewPhotos}>
-                    {review.photos.map((photo, idx) => (
-                      <Image
-                        key={idx}
-                        className={styles.reviewPhoto}
-                        src={photo}
-                        mode='aspectFill'
-                      />
-                    ))}
-                  </View>
+                {review.remark && (
+                  <Text className={styles.reviewRemark}>{review.remark}</Text>
                 )}
               </View>
             ))
@@ -289,41 +241,26 @@ const RectificationDetailPage: React.FC = () => {
       <View className={styles.bottomBar}>
         {canStartProcess && (
           <>
-            <Button
-              className={classnames(styles.btn, styles.btnSecondary)}
-              onClick={() => Taro.navigateBack()}
-            >
+            <Button className={classnames(styles.btn, styles.btnSecondary)} onClick={() => Taro.navigateBack()}>
               返回
             </Button>
-            <Button
-              className={classnames(styles.btn, styles.btnWarning)}
-              onClick={handleStartProcess}
-            >
+            <Button className={classnames(styles.btn, styles.btnWarning)} onClick={handleStartProcess}>
               开始整改
             </Button>
           </>
         )}
         {canReview && (
           <>
-            <Button
-              className={classnames(styles.btn, styles.btnSecondary)}
-              onClick={() => Taro.navigateBack()}
-            >
+            <Button className={classnames(styles.btn, styles.btnSecondary)} onClick={() => Taro.navigateBack()}>
               返回
             </Button>
-            <Button
-              className={classnames(styles.btn, styles.btnSuccess)}
-              onClick={handleSubmitReview}
-            >
+            <Button className={classnames(styles.btn, styles.btnSuccess)} onClick={handleSubmitReview}>
               提交复查
             </Button>
           </>
         )}
         {item.status === 'closed' && (
-          <Button
-            className={classnames(styles.btn, styles.btnPrimary)}
-            onClick={() => Taro.navigateBack()}
-          >
+          <Button className={classnames(styles.btn, styles.btnPrimary)} onClick={() => Taro.navigateBack()}>
             返回列表
           </Button>
         )}
@@ -340,21 +277,13 @@ const RectificationDetailPage: React.FC = () => {
                 <Text className={styles.modalLabel}>复查结果</Text>
                 <View className={styles.resultOptions}>
                   <Button
-                    className={classnames(
-                      styles.resultOption,
-                      reviewResult === 'pass' && styles.active,
-                      reviewResult === 'pass' && styles.pass
-                    )}
+                    className={classnames(styles.resultOption, reviewResult === 'pass' && styles.active, reviewResult === 'pass' && styles.pass)}
                     onClick={() => setReviewResult('pass')}
                   >
                     ✓ 通过
                   </Button>
                   <Button
-                    className={classnames(
-                      styles.resultOption,
-                      reviewResult === 'fail' && styles.active,
-                      reviewResult === 'fail' && styles.fail
-                    )}
+                    className={classnames(styles.resultOption, reviewResult === 'fail' && styles.active, reviewResult === 'fail' && styles.fail)}
                     onClick={() => setReviewResult('fail')}
                   >
                     ✗ 未通过
@@ -373,16 +302,10 @@ const RectificationDetailPage: React.FC = () => {
               </View>
             </View>
             <View className={styles.modalFooter}>
-              <Button
-                className={classnames(styles.modalBtn, styles.modalBtnCancel)}
-                onClick={() => setShowReviewModal(false)}
-              >
+              <Button className={classnames(styles.modalBtn, styles.modalBtnCancel)} onClick={() => setShowReviewModal(false)}>
                 取消
               </Button>
-              <Button
-                className={classnames(styles.modalBtn, styles.modalBtnConfirm)}
-                onClick={handleConfirmReview}
-              >
+              <Button className={classnames(styles.modalBtn, styles.modalBtnConfirm)} onClick={handleConfirmReview}>
                 确认提交
               </Button>
             </View>

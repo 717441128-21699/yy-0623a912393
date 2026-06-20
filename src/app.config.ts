@@ -5,7 +5,8 @@ export default defineAppConfig({
     'pages/rectification/index',
     'pages/inspection-detail/index',
     'pages/photo-mark/index',
-    'pages/rectification-detail/index'
+    'pages/rectification-detail/index',
+    'pages/board/index'
   ],
   window: {
     backgroundTextStyle: 'light',
@@ -30,6 +31,10 @@ export default defineAppConfig({
       {
         pagePath: 'pages/rectification/index',
         text: '整改清单'
+      },
+      {
+        pagePath: 'pages/board/index',
+        text: '闭环看板'
       }
     ]
   }

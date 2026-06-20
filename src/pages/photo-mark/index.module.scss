@@ -8,63 +8,84 @@
 }
 
 .imageContainer {
-  flex: 1;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .image {
   width: 100%;
-  max-height: 70vh;
+  display: block;
 }
 
 .markDot {
   position: absolute;
-  width: 32rpx;
-  height: 32rpx;
+  width: 40rpx;
+  height: 40rpx;
   background-color: $color-error;
-  border-radius: $radius-round;
   border: 4rpx solid $color-text-white;
+  border-radius: $radius-round;
   transform: translate(-50%, -50%);
   z-index: 10;
-  cursor: pointer;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 10rpx;
-    height: 10rpx;
-    background-color: $color-text-white;
-    border-radius: $radius-round;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.5);
 }
 
-.markTooltip {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.8);
+.markIndex {
   color: $color-text-white;
-  padding: 12rpx 20rpx;
-  border-radius: $radius-sm;
-  font-size: $font-size-sm;
-  transform: translate(-50%, -100%);
-  margin-top: -20rpx;
-  z-index: 11;
-  white-space: nowrap;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1;
 }
 
-.markTooltip .deleteBtn {
+.markLabel {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.85);
+  padding: 8rpx 16rpx;
+  border-radius: $radius-xs;
+  z-index: 11;
+  max-width: 55%;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.markLabelText {
+  color: $color-text-white;
+  font-size: 22rpx;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.markLabel .deleteBtn {
   color: $color-error;
-  margin-left: $spacing-sm;
   font-size: $font-size-sm;
+  flex-shrink: 0;
+  padding: 4rpx;
+}
+
+.hintBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(30, 136, 229, 0.9);
+  padding: $spacing-md;
+  text-align: center;
+}
+
+.hintText {
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
 }
 
 .toolbar {
+  flex: 1;
   background-color: $color-bg-card;
   padding: $spacing-lg;
   padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
@@ -110,16 +131,6 @@
   line-height: 1.5;
 }
 
-.pickerRow {
-  display: flex;
-  gap: $spacing-md;
-  margin-bottom: $spacing-md;
-}
-
-.pickerItem {
-  flex: 1;
-}
-
 .categoryOptions {
   display: flex;
   gap: $spacing-sm;
@@ -149,22 +160,96 @@
   }
 }
 
+.markInputRow {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+}
+
+.markInput {
+  flex: 1;
+  height: 80rpx;
+  padding: 0 $spacing-md;
+  font-size: $font-size-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-sm;
+  border: 2rpx solid $color-border;
+  color: $color-text-primary;
+}
+
+.markBtn {
+  @include button-reset;
+  height: 80rpx;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  flex-shrink: 0;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.markBtnNormal {
+  background-color: $color-primary;
+  color: $color-text-white;
+}
+
+.markBtnActive {
+  background-color: $color-error;
+  color: $color-text-white;
+}
+
+.markHint {
+  margin-top: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background-color: rgba(30, 136, 229, 0.1);
+  border-radius: $radius-sm;
+  border: 2rpx solid rgba(30, 136, 229, 0.3);
+}
+
+.markHintText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  line-height: 1.5;
+}
+
 .marksList {
   margin-bottom: $spacing-md;
-  max-height: 200rpx;
+  max-height: 300rpx;
   overflow-y: auto;
 }
 
 .markListItem {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: $spacing-sm;
   padding: $spacing-sm 0;
   border-bottom: 2rpx solid $color-divider;
 
   &:last-child {
     border-bottom: none;
   }
+}
+
+.markListDot {
+  width: 36rpx;
+  height: 36rpx;
+  background-color: $color-error;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.markListDotText {
+  color: $color-text-white;
+  font-size: 18rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1;
 }
 
 .markListText {
@@ -183,6 +268,7 @@
 .btnRow {
   display: flex;
   gap: $spacing-md;
+  margin-top: $spacing-md;
 }
 
 .btn {
@@ -216,18 +302,6 @@
   pointer-events: none;
 }
 
-.hint {
-  text-align: center;
-  color: $color-text-white;
-  font-size: $font-size-sm;
-  padding: $spacing-md;
-  background-color: rgba(0, 0, 0, 0.5);
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
-
 .locationSelector {
   margin-bottom: $spacing-md;
 }
@@ -246,7 +320,6 @@
   border: 2rpx solid $color-border;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 $spacing-sm;
 }
 
@@ -336,6 +409,7 @@
   align-items: center;
   justify-content: center;
   padding: $spacing-xl * 2;
+  background-color: #333;
 }
 
 .noPhotoIcon {
