@@ -109,13 +109,18 @@
 .thumbImageWrapper {
   position: relative;
   width: 100%;
-  height: 240rpx;
   overflow: hidden;
+  background-color: #000;
+}
+
+.thumbImageInner {
+  position: relative;
+  width: 100%;
 }
 
 .thumbImage {
   width: 100%;
-  height: 100%;
+  display: block;
 }
 
 .thumbDot {

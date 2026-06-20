@@ -70,26 +70,30 @@ const AnnotatedPhoto: React.FC<AnnotatedPhotoProps> = ({
   return (
     <View className={styles.thumbContainer} onClick={onClick}>
       <View className={styles.thumbImageWrapper}>
-        <Image
-          className={styles.thumbImage}
-          src={photo.thumbnail || photo.url}
-          mode='aspectFill'
-        />
+        <View className={styles.thumbImageInner}>
+          <Image
+            className={styles.thumbImage}
+            src={photo.thumbnail || photo.url}
+            mode='widthFix'
+          />
+          {showMarks && marks.length > 0 && (
+            <>
+              {marks.map((mark, index) => (
+                <View
+                  key={mark.id}
+                  className={styles.thumbDot}
+                  style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
+                >
+                  <Text className={styles.thumbDotText}>{index + 1}</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
         {showMarks && marks.length > 0 && (
-          <>
-            {marks.map((mark, index) => (
-              <View
-                key={mark.id}
-                className={styles.thumbDot}
-                style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-              >
-                <Text className={styles.thumbDotText}>{index + 1}</Text>
-              </View>
-            ))}
-            <View className={styles.marksBadge}>
-              <Text className={styles.marksBadgeText}>{marks.length}</Text>
-            </View>
-          </>
+          <View className={styles.marksBadge}>
+            <Text className={styles.marksBadgeText}>{marks.length}</Text>
+          </View>
         )}
       </View>
       {showMeta && (

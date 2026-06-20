@@ -153,7 +153,8 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
     const items: RectificationItem[] = []
 
     const itemPhotosMap = new Map<string, string[]>()
-    photoRecords.forEach(p => {
+    const currentInspectionPhotos = photoRecords.filter(p => photoIds.includes(p.id))
+    currentInspectionPhotos.forEach(p => {
       if (p.itemId) {
         const existing = itemPhotosMap.get(p.itemId) || []
         existing.push(p.id)

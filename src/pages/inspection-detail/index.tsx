@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
@@ -14,13 +14,12 @@ const InspectionDetailPage: React.FC = () => {
   const {
     inspectionRecords,
     getRectificationsByInspection,
-    getPhotosByInspection,
+    getPhotosByIds,
     rectificationItems
   } = useInspection()
 
   const [record, setRecord] = useState<InspectionRecord | null>(null)
-  const [relatedRectifications, setRelatedRectifications] = useState<RectificationItem[]>([])
-  const [relatedPhotos, setRelatedPhotos] = useState<PhotoRecord[]>([])
+  const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
 
   useEffect(() => {
     const id = router.params.id
@@ -28,8 +27,6 @@ const InspectionDetailPage: React.FC = () => {
       const found = inspectionRecords.find(r => r.id === id)
       if (found) {
         setRecord(found)
-        setRelatedRectifications(getRectificationsByInspection(id))
-        setRelatedPhotos(getPhotosByIds(found.photos))
       } else {
         Taro.showToast({
           title: '记录不存在',
@@ -37,15 +34,28 @@ const InspectionDetailPage: React.FC = () => {
         })
       }
     }
-  }, [router.params.id, inspectionRecords, getRectificationsByInspection, getPhotosByIds, rectificationItems])
+  }, [router.params.id, inspectionRecords])
+
+  const relatedRectifications = useMemo(() => {
+    if (!record) return []
+    return getRectificationsByInspection(record.id)
+  }, [record, getRectificationsByInspection, rectificationItems])
+
+  const relatedPhotos = useMemo(() => {
+    if (!record) return []
+    try {
+      return getPhotosByIds(record.photos || [])
+    } catch (e) {
+      console.error('加载照片失败:', e)
+      return []
+    }
+  }, [record, getPhotosByIds])
 
   const handleViewRectification = (item: RectificationItem) => {
     Taro.navigateTo({
       url: `/pages/rectification-detail/index?id=${item.id}`
     })
   }
-
-  const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
 
   const handleViewPhoto = (photo: PhotoRecord) => {
     setViewingPhoto(viewingPhoto?.id === photo.id ? null : photo)
@@ -114,7 +124,7 @@ const InspectionDetailPage: React.FC = () => {
                 <View key={photo.id} className={styles.photoItem}>
                   <AnnotatedPhoto
                     photo={photo}
-                    mode={viewingPhoto?.id === photo.id ? 'full' : 'thumb'}
+                    mode='thumb'
                     showMarks={true}
                     showMeta={true}
                     onClick={() => handleViewPhoto(photo)}
@@ -223,6 +233,49 @@ const InspectionDetailPage: React.FC = () => {
           >
             查看整改清单
           </Button>
+        </View>
+      )}
+
+      {viewingPhoto && (
+        <View className={styles.photoModalOverlay} onClick={() => setViewingPhoto(null)}>
+          <View className={styles.photoModalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.photoModalHeader}>
+              <Text className={styles.photoModalTitle}>照片详情</Text>
+              <Button className={styles.photoModalClose} onClick={() => setViewingPhoto(null)}>
+                ✕
+              </Button>
+            </View>
+            <ScrollView className={styles.photoModalBody} scrollY>
+              <AnnotatedPhoto
+                photo={viewingPhoto}
+                mode='full'
+                showMarks={true}
+                showMeta={true}
+              />
+            </ScrollView>
+            <View className={styles.photoModalFooter}>
+              <View className={styles.photoInfo}>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>位置</Text>
+                  <Text className={styles.photoInfoValue}>{getLocationText(viewingPhoto.location)}</Text>
+                </View>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>分类</Text>
+                  <Text className={styles.photoInfoValue}>{viewingPhoto.categoryName}</Text>
+                </View>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>拍摄时间</Text>
+                  <Text className={styles.photoInfoValue}>{formatDateTime(viewingPhoto.createTime)}</Text>
+                </View>
+                {viewingPhoto.description && (
+                  <View className={styles.photoInfoRow}>
+                    <Text className={styles.photoInfoLabel}>描述</Text>
+                    <Text className={styles.photoInfoValue}>{viewingPhoto.description}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </ScrollView>

@@ -337,3 +337,93 @@
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
   color: $color-text-white;
 }
+
+.photoModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.photoModalContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.photoModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-lg;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.photoModalTitle {
+  font-size: $font-size-md;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.photoModalClose {
+  @include button-reset;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photoModalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-lg;
+}
+
+.photoModalFooter {
+  padding: $spacing-lg;
+  background-color: rgba(0, 0, 0, 0.8);
+  padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+}
+
+.photoInfo {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+.photoInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: $spacing-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 2rpx solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+.photoInfoLabel {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+  margin-right: $spacing-md;
+}
+
+.photoInfoValue {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+  flex: 1;
+  text-align: right;
+  line-height: 1.5;
+}
