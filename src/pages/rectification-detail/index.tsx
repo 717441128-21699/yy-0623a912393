@@ -1,21 +1,42 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, Text, ScrollView, Button, Image, Textarea } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
-import { RectificationItem, ReviewRecord } from '@/types'
+import { RectificationItem, ReviewRecord, PhotoRecord } from '@/types'
 import StatusTag from '@/components/StatusTag'
 import { getLocationText, formatDateTime, generateId, getCurrentDateTime } from '@/utils'
 import styles from './index.module.scss'
 
 const RectificationDetailPage: React.FC = () => {
   const router = useRouter()
-  const { rectificationItems, updateRectificationItem } = useInspection()
+  const {
+    rectificationItems,
+    updateRectificationItem,
+    getPhotosByIds,
+    photoRecords
+  } = useInspection()
 
   const [item, setItem] = useState<RectificationItem | null>(null)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [reviewResult, setReviewResult] = useState<'pass' | 'fail'>('pass')
   const [reviewRemark, setReviewRemark] = useState('')
+  const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null)
+
+  const actualPhotos = useMemo(() => {
+    if (!item) return []
+    const directPhotos = getPhotosByIds(item.photos || [])
+    const additionalPhotos = item.inspectionId
+      ? photoRecords.filter(p => p.inspectionId === item.inspectionId)
+      : []
+    const allPhotos = [...directPhotos]
+    additionalPhotos.forEach(p => {
+      if (!allPhotos.find(ap => ap.id === p.id)) {
+        allPhotos.push(p)
+      }
+    })
+    return allPhotos
+  }, [item, getPhotosByIds, photoRecords])
 
   useEffect(() => {
     const id = router.params.id
@@ -82,6 +103,28 @@ const RectificationDetailPage: React.FC = () => {
     })
   }
 
+  const handleTakePhoto = () => {
+    Taro.chooseImage({
+      count: 1,
+      sourceType: ['camera'],
+      success: (res) => {
+        const rectId = router.params.id
+        Taro.navigateTo({
+          url: `/pages/photo-mark/index?tempPath=${res.tempFilePaths[0]}&rectificationId=${rectId}`
+        })
+      }
+    })
+  }
+
+  const handleViewPhoto = (index: number) => {
+    const photos = actualPhotos
+    if (photos.length === 0) return
+    Taro.previewImage({
+      urls: photos.map(p => p.url),
+      current: photos[index].url
+    })
+  }
+
   if (!item) {
     return (
       <ScrollView className={styles.page} scrollY>
@@ -136,7 +179,9 @@ const RectificationDetailPage: React.FC = () => {
           </View>
           <View className={styles.infoRow}>
             <Text className={styles.infoLabel}>截止时间</Text>
-            <Text className={styles.infoValue}>{formatDateTime(item.deadline)}</Text>
+            <Text className={classnames(styles.infoValue, styles.deadlineText)}>
+              {formatDateTime(item.deadline)}
+            </Text>
           </View>
         </View>
 
@@ -145,21 +190,59 @@ const RectificationDetailPage: React.FC = () => {
           <Text className={styles.descriptionText}>{item.description}</Text>
         </View>
 
-        {item.photos.length > 0 && (
-          <View className={styles.infoCard}>
-            <Text className={styles.sectionTitle}>问题照片</Text>
-            <View className={styles.photosSection}>
-              {item.photos.map((photoId, index) => (
-                <Image
-                  key={index}
-                  className={styles.photoThumb}
-                  src={`https://picsum.photos/id/${100 + index}/160/160`}
-                  mode='aspectFill'
-                />
+        <View className={styles.infoCard}>
+          <View className={styles.sectionHeaderRow}>
+            <Text className={styles.sectionTitle}>问题照片（{actualPhotos.length}张）</Text>
+            <Button
+              className={styles.takePhotoBtn}
+              onClick={handleTakePhoto}
+            >
+              + 补充拍照
+            </Button>
+          </View>
+          {actualPhotos.length === 0 ? (
+            <View className={styles.emptyPhoto}>
+              <Text className={styles.emptyPhotoIcon}>📷</Text>
+              <Text className={styles.emptyPhotoText}>暂无照片，可点击上方按钮补充拍照</Text>
+            </View>
+          ) : (
+            <View className={styles.photosGrid}>
+              {actualPhotos.map((photo, index) => (
+                <View
+                  key={photo.id}
+                  className={styles.photoCard}
+                  onClick={() => handleViewPhoto(index)}
+                >
+                  <Image
+                    className={styles.photoThumb}
+                    src={photo.thumbnail || photo.url}
+                    mode='aspectFill'
+                  />
+                  {photo.marks && photo.marks.length > 0 && (
+                    <View className={styles.marksCountBadge}>
+                      <Text>{photo.marks.length}标注</Text>
+                    </View>
+                  )}
+                  <View className={styles.photoMeta}>
+                    <Text className={styles.photoCategory}>{photo.categoryName}</Text>
+                  </View>
+                  {photo.marks && photo.marks.length > 0 && (
+                    <View className={styles.marksPreview}>
+                      {photo.marks.slice(0, 2).map((mark, idx) => (
+                        <Text key={mark.id} className={styles.markPreviewItem}>
+                          • {idx + 1}. {mark.text}
+                        </Text>
+                      ))}
+                      {photo.marks.length > 2 && (
+                        <Text className={styles.markMore}>...等{photo.marks.length}处</Text>
+                      )}
+                    </View>
+                  )}
+                </View>
               ))}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         <View className={styles.reviewsSection}>
           <Text className={styles.sectionTitle}>复查记录（{item.reviewRecords.length}次）</Text>

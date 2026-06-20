@@ -103,3 +103,223 @@ export const validateValue = (
   }
   return { valid: true, message: '' }
 }
+
+export interface SeverityResult {
+  severity: 'serious' | 'general' | 'minor'
+  severityName: string
+  isSuspend: boolean
+  needTechReview: boolean
+  deviationPercent: number
+  deviationValue: number
+}
+
+export const calculateSeverity = (
+  measuredValue: number,
+  minValue: number,
+  maxValue: number,
+  unit: string
+): SeverityResult => {
+  let deviation = 0
+  let referenceValue = 0
+
+  if (measuredValue < minValue) {
+    deviation = minValue - measuredValue
+    referenceValue = minValue > 0 ? minValue : 1
+  } else if (measuredValue > maxValue) {
+    deviation = measuredValue - maxValue
+    referenceValue = maxValue > 0 ? maxValue : 1
+  }
+
+  const deviationPercent = (deviation / referenceValue) * 100
+
+  let severity: 'serious' | 'general' | 'minor' = 'minor'
+  let severityName = '轻微'
+  let isSuspend = false
+  let needTechReview = false
+
+  if (deviationPercent >= 30) {
+    severity = 'serious'
+    severityName = '严重'
+    isSuspend = true
+    needTechReview = true
+  } else if (deviationPercent >= 10) {
+    severity = 'general'
+    severityName = '一般'
+    isSuspend = false
+    needTechReview = false
+  } else {
+    severity = 'minor'
+    severityName = '轻微'
+    isSuspend = false
+    needTechReview = false
+  }
+
+  const criticalItems = ['free-end-height', 'jack-exposed', 'sweep-rod-height']
+  const itemId = ''
+  if (criticalItems.includes(itemId) && deviationPercent >= 20) {
+    severity = 'serious'
+    severityName = '严重'
+    isSuspend = true
+    needTechReview = true
+  }
+
+  return {
+    severity,
+    severityName,
+    isSuspend,
+    needTechReview,
+    deviationPercent,
+    deviationValue: deviation
+  }
+}
+
+export const calculateSeverityByItem = (
+  itemId: string,
+  measuredValue: number,
+  minValue: number,
+  maxValue: number
+): SeverityResult => {
+  let deviation = 0
+  let referenceValue = 0
+
+  if (measuredValue < minValue) {
+    deviation = minValue - measuredValue
+    referenceValue = minValue > 0 ? minValue : 1
+  } else if (measuredValue > maxValue) {
+    deviation = measuredValue - maxValue
+    referenceValue = maxValue > 0 ? maxValue : 1
+  }
+
+  const deviationPercent = (deviation / referenceValue) * 100
+
+  let severity: 'serious' | 'general' | 'minor' = 'minor'
+  let severityName = '轻微'
+  let isSuspend = false
+  let needTechReview = false
+
+  const criticalItems = ['free-end-height', 'jack-exposed', 'pole-spacing-h', 'pole-spacing-v']
+  const importantItems = ['sweep-rod-height', 'scissor-support', 'fastener-torque']
+
+  if (criticalItems.includes(itemId)) {
+    if (deviationPercent >= 20 || deviation >= 100) {
+      severity = 'serious'
+      severityName = '严重'
+      isSuspend = true
+      needTechReview = true
+    } else if (deviationPercent >= 8 || deviation >= 40) {
+      severity = 'general'
+      severityName = '一般'
+      isSuspend = false
+      needTechReview = false
+    } else {
+      severity = 'minor'
+      severityName = '轻微'
+      isSuspend = false
+      needTechReview = false
+    }
+  } else if (importantItems.includes(itemId)) {
+    if (deviationPercent >= 30 || deviation >= 80) {
+      severity = 'serious'
+      severityName = '严重'
+      isSuspend = true
+      needTechReview = true
+    } else if (deviationPercent >= 12 || deviation >= 30) {
+      severity = 'general'
+      severityName = '一般'
+      isSuspend = false
+      needTechReview = false
+    } else {
+      severity = 'minor'
+      severityName = '轻微'
+      isSuspend = false
+      needTechReview = false
+    }
+  } else {
+    if (deviationPercent >= 40 || deviation >= 100) {
+      severity = 'serious'
+      severityName = '严重'
+      isSuspend = false
+      needTechReview = true
+    } else if (deviationPercent >= 15 || deviation >= 40) {
+      severity = 'general'
+      severityName = '一般'
+      isSuspend = false
+      needTechReview = false
+    } else {
+      severity = 'minor'
+      severityName = '轻微'
+      isSuspend = false
+      needTechReview = false
+    }
+  }
+
+  return {
+    severity,
+    severityName,
+    isSuspend,
+    needTechReview,
+    deviationPercent,
+    deviationValue: deviation
+  }
+}
+
+export const getDeadline = (severity: 'serious' | 'general' | 'minor'): string => {
+  const now = new Date()
+  let hoursToAdd = 0
+
+  switch (severity) {
+    case 'serious':
+      hoursToAdd = 4
+      break
+    case 'general':
+      hoursToAdd = 12
+      break
+    case 'minor':
+      hoursToAdd = 24
+      break
+  }
+
+  now.setHours(now.getHours() + hoursToAdd)
+  return getCurrentDateTime()
+}
+
+const STORAGE_KEY = 'formwork_inspection_data_v1'
+
+export interface PersistedData {
+  inspectionRecords: any[]
+  photoRecords: any[]
+  rectificationItems: any[]
+  lastUpdated: string
+}
+
+export const saveToStorage = (data: Omit<PersistedData, 'lastUpdated'>): void => {
+  try {
+    const fullData: PersistedData = {
+      ...data,
+      lastUpdated: getCurrentDateTime()
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fullData))
+  } catch (e) {
+    console.error('保存数据失败:', e)
+  }
+}
+
+export const loadFromStorage = (): PersistedData | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw) as PersistedData
+    return data
+  } catch (e) {
+    console.error('读取数据失败:', e)
+    return null
+  }
+}
+
+export const clearStorage = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch (e) {
+    console.error('清除数据失败:', e)
+  }
+}

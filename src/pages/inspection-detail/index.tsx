@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, ScrollView } from '@tarojs/components'
+import { View, Text, ScrollView, Button, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
-import { InspectionRecord } from '@/types'
+import { InspectionRecord, RectificationItem, PhotoRecord } from '@/types'
 import StatusTag from '@/components/StatusTag'
-import { getLocationText } from '@/utils'
+import { getLocationText, formatDateTime } from '@/utils'
 import styles from './index.module.scss'
 
 const InspectionDetailPage: React.FC = () => {
   const router = useRouter()
-  const { inspectionRecords } = useInspection()
+  const {
+    inspectionRecords,
+    getRectificationsByInspection,
+    getPhotosByInspection,
+    rectificationItems
+  } = useInspection()
 
   const [record, setRecord] = useState<InspectionRecord | null>(null)
+  const [relatedRectifications, setRelatedRectifications] = useState<RectificationItem[]>([])
+  const [relatedPhotos, setRelatedPhotos] = useState<PhotoRecord[]>([])
 
   useEffect(() => {
     const id = router.params.id
@@ -20,6 +27,8 @@ const InspectionDetailPage: React.FC = () => {
       const found = inspectionRecords.find(r => r.id === id)
       if (found) {
         setRecord(found)
+        setRelatedRectifications(getRectificationsByInspection(id))
+        setRelatedPhotos(getPhotosByInspection(id))
       } else {
         Taro.showToast({
           title: '记录不存在',
@@ -27,7 +36,20 @@ const InspectionDetailPage: React.FC = () => {
         })
       }
     }
-  }, [router.params.id, inspectionRecords])
+  }, [router.params.id, inspectionRecords, getRectificationsByInspection, getPhotosByInspection, rectificationItems])
+
+  const handleViewRectification = (item: RectificationItem) => {
+    Taro.navigateTo({
+      url: `/pages/rectification-detail/index?id=${item.id}`
+    })
+  }
+
+  const handleViewPhoto = (photo: PhotoRecord) => {
+    Taro.previewImage({
+      urls: [photo.url],
+      current: photo.url
+    })
+  }
 
   if (!record) {
     return (
@@ -84,10 +106,41 @@ const InspectionDetailPage: React.FC = () => {
           </View>
         </View>
 
+        {relatedPhotos.length > 0 && (
+          <View className={styles.infoCard}>
+            <Text className={styles.sectionTitle}>现场照片（{relatedPhotos.length}张）</Text>
+            <View className={styles.photosGrid}>
+              {relatedPhotos.map(photo => (
+                <View key={photo.id} className={styles.photoItem} onClick={() => handleViewPhoto(photo)}>
+                  <Image
+                    className={styles.photoThumb}
+                    src={photo.thumbnail || photo.url}
+                    mode='aspectFill'
+                  />
+                  {photo.marks.length > 0 && (
+                    <View className={styles.marksBadge}>
+                      <Text>{photo.marks.length}</Text>
+                    </View>
+                  )}
+                  <View className={styles.photoCategory}>
+                    <Text>{photo.categoryName}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View className={styles.resultsSection}>
           <Text className={styles.sectionTitle}>检查项详情</Text>
           {record.results.map(result => (
-            <View key={result.itemId} className={styles.resultItem}>
+            <View
+              key={result.itemId}
+              className={classnames(
+                styles.resultItem,
+                !result.isQualified && styles.resultItemFailed
+              )}
+            >
               <Text className={styles.resultName}>{result.itemName}</Text>
               <View className={styles.resultValue}>
                 <Text
@@ -107,9 +160,56 @@ const InspectionDetailPage: React.FC = () => {
                   {result.isQualified ? '✓' : '✗'}
                 </Text>
               </View>
+              {!result.isQualified && result.remark && (
+                <Text className={styles.resultRemark}>备注：{result.remark}</Text>
+              )}
             </View>
           ))}
         </View>
+
+        {relatedRectifications.length > 0 && (
+          <View className={styles.rectificationSection}>
+            <View className={styles.sectionHeader}>
+              <Text className={styles.sectionTitle}>关联整改项（{relatedRectifications.length}项）</Text>
+            </View>
+            {relatedRectifications.map(item => (
+              <View
+                key={item.id}
+                className={styles.rectificationItem}
+                onClick={() => handleViewRectification(item)}
+              >
+                <View className={styles.rectHeader}>
+                  <Text className={styles.rectItemName}>{item.itemName}</Text>
+                  <StatusTag type={item.severity} text={item.severityName} size='sm' />
+                </View>
+                <View className={styles.rectTags}>
+                  <StatusTag type={item.status} text={item.statusName} size='sm' />
+                  {item.isSuspend && (
+                    <View className={`${styles.rectFlag} ${styles.flagDanger}`}>
+                      <Text>🚫 暂停浇筑</Text>
+                    </View>
+                  )}
+                  {item.needTechReview && (
+                    <View className={`${styles.rectFlag} ${styles.flagInfo}`}>
+                      <Text>🔧 技术复核</Text>
+                    </View>
+                  )}
+                </View>
+                <Text className={styles.rectDescription}>{item.description}</Text>
+                <View className={styles.rectMeta}>
+                  <Text className={styles.rectDeadline}>
+                    截止：{formatDateTime(item.deadline)}
+                  </Text>
+                  <Text className={styles.rectReviewCount}>
+                    {item.reviewRecords.length > 0
+                      ? `已复查${item.reviewRecords.length}次`
+                      : '等待整改'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View className={styles.remarkSection}>
           <Text className={styles.sectionTitle}>检查备注</Text>
@@ -120,6 +220,17 @@ const InspectionDetailPage: React.FC = () => {
           )}
         </View>
       </View>
+
+      {relatedRectifications.length > 0 && (
+        <View className={styles.bottomBar}>
+          <Button
+            className={classnames(styles.btn, styles.btnPrimary)}
+            onClick={() => Taro.switchTab({ url: '/pages/rectification/index' })}
+          >
+            查看整改清单
+          </Button>
+        </View>
+      )}
     </ScrollView>
   )
 }

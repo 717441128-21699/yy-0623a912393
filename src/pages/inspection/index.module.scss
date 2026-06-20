@@ -404,3 +404,180 @@
   background: linear-gradient(135deg, $color-error 0%, #FF6B6B 100%);
   color: $color-text-white;
 }
+
+.modalBtnWarning {
+  background: linear-gradient(135deg, $color-warning 0%, #FFB74D 100%);
+  color: $color-text-white;
+}
+
+.modalScrollBody {
+  padding: $spacing-lg;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.rectCount {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.severitySummary {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.summarySubTitle {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+  margin-bottom: $spacing-md;
+}
+
+.severityRow {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.severityBadge {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+
+  &.serious {
+    background-color: rgba(244, 67, 54, 0.1);
+    .severityCount, .severityLabel {
+      color: $color-serious;
+    }
+  }
+
+  &.general {
+    background-color: rgba(255, 152, 0, 0.1);
+    .severityCount, .severityLabel {
+      color: $color-general;
+    }
+  }
+
+  &.minor {
+    background-color: rgba(255, 193, 7, 0.15);
+    .severityCount, .severityLabel {
+      color: $color-minor;
+    }
+  }
+}
+
+.severityCount {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+}
+
+.severityLabel {
+  font-size: $font-size-xs;
+  margin-top: $spacing-xs;
+}
+
+.dangerBox {
+  background-color: $color-bg-tag-error;
+  border: 2rpx solid rgba(244, 67, 54, 0.3);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.dangerText {
+  font-size: $font-size-md;
+  color: $color-error;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.dangerSubtext {
+  font-size: $font-size-sm;
+  color: $color-error;
+  line-height: 1.5;
+}
+
+.failedItemDetail {
+  background-color: $color-bg-page;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.failedItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.failedItemInfo {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.infoBlock {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.infoBlockLabel {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+}
+
+.infoBlockValue {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+
+  &.failed {
+    color: $color-error;
+  }
+}
+
+.failedItemFlags {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+
+  &.flagDanger {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: $color-error;
+  }
+
+  &.flagInfo {
+    background-color: rgba(30, 136, 229, 0.15);
+    color: $color-primary;
+  }
+
+  &.flagNormal {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: $color-success;
+  }
+}
+
+.failedItemRemark {
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}

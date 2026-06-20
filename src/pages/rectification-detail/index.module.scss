@@ -382,3 +382,121 @@
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
   color: $color-text-white;
 }
+
+.deadlineText {
+  color: $color-warning;
+  font-weight: $font-weight-semibold;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.sectionHeaderRow .sectionTitle {
+  margin-bottom: 0;
+}
+
+.takePhotoBtn {
+  @include button-reset;
+  padding: 12rpx 20rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background-color: rgba(30, 136, 229, 0.1);
+  color: $color-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.emptyPhoto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl;
+  background-color: $color-bg-page;
+  border-radius: $radius-sm;
+}
+
+.emptyPhotoIcon {
+  font-size: 80rpx;
+  margin-bottom: $spacing-sm;
+  opacity: 0.6;
+}
+
+.emptyPhotoText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.photosGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
+}
+
+.photoCard {
+  position: relative;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background-color: $color-bg-page;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.photoCard .photoThumb {
+  width: 100%;
+  height: 240rpx;
+  object-fit: cover;
+}
+
+.marksCountBadge {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  background-color: rgba(244, 67, 54, 0.95);
+  color: $color-text-white;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+  font-size: 20rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.photoMeta {
+  padding: $spacing-sm;
+  background-color: $color-bg-card;
+}
+
+.photoCategory {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.marksPreview {
+  padding: 0 $spacing-sm $spacing-sm;
+  background-color: $color-bg-card;
+  border-top: 2rpx solid $color-divider;
+}
+
+.markPreviewItem {
+  font-size: 20rpx;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.markMore {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  line-height: 1.4;
+}

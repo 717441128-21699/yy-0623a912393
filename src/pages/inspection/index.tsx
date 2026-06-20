@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { View, Text, ScrollView, Button, Textarea } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import classnames from 'classnames'
@@ -7,8 +7,16 @@ import { Location, InspectionResult, InspectionRecord } from '@/types'
 import LocationSelector from '@/components/LocationSelector'
 import InspectionCard from '@/components/InspectionCard'
 import StatusTag from '@/components/StatusTag'
-import { generateId, getCurrentDateTime, getLocationText } from '@/utils'
+import { generateId, getCurrentDateTime, getLocationText, SeverityResult } from '@/utils'
 import styles from './index.module.scss'
+
+interface FailedItemWithSeverity {
+  result: InspectionResult
+  severity: SeverityResult
+  standardName: string
+  qualifiedRange: string
+  unit: string
+}
 
 const InspectionPage: React.FC = () => {
   const {
@@ -19,7 +27,10 @@ const InspectionPage: React.FC = () => {
     resetResults,
     inspectionRecords,
     addInspectionRecord,
-    itemStandards
+    itemStandards,
+    getItemSeverity,
+    photoRecords,
+    getCurrentInspectionId
   } = useInspection()
 
   const [showSummary, setShowSummary] = useState(false)
@@ -43,7 +54,37 @@ const InspectionPage: React.FC = () => {
 
   const passedCount = currentResults.filter(r => r.isQualified).length
   const failedCount = currentResults.filter(r => !r.isQualified && r.measuredValue > 0).length
-  const hasSeriousIssue = currentResults.some(r => !r.isQualified && r.measuredValue > 0)
+  const hasFailed = failedCount > 0
+
+  const failedItemsWithSeverity = useMemo<FailedItemWithSeverity[]>(() => {
+    return currentResults
+      .filter(r => !r.isQualified && r.measuredValue > 0)
+      .map(r => {
+        const standard = itemStandards.find(s => s.id === r.itemId)
+        const severity = standard
+          ? getItemSeverity(r.itemId, r.measuredValue, standard.minValue, standard.maxValue)
+          : null
+        return {
+          result: r,
+          severity: severity || {
+            severity: 'minor' as const,
+            severityName: '轻微',
+            isSuspend: false,
+            needTechReview: false,
+            deviationPercent: 0,
+            deviationValue: 0
+          },
+          standardName: standard?.name || r.itemName,
+          qualifiedRange: standard?.qualifiedRange || '',
+          unit: standard?.unit || r.unit
+        }
+      })
+  }, [currentResults, itemStandards, getItemSeverity])
+
+  const seriousCount = failedItemsWithSeverity.filter(f => f.severity.severity === 'serious').length
+  const generalCount = failedItemsWithSeverity.filter(f => f.severity.severity === 'general').length
+  const minorCount = failedItemsWithSeverity.filter(f => f.severity.severity === 'minor').length
+  const hasSuspendIssue = failedItemsWithSeverity.some(f => f.severity.isSuspend)
 
   const handleSubmit = () => {
     if (!canSubmit) {
@@ -59,22 +100,30 @@ const InspectionPage: React.FC = () => {
   const handleConfirmSubmit = () => {
     const failedItems = currentResults.filter(r => !r.isQualified)
     const overallStatus = failedItems.length === 0 ? 'passed' : 'failed'
-    
+
+    const relatedPhotoIds = photoRecords
+      .filter(p =>
+        p.location.building === currentLocation.building &&
+        p.location.floor === currentLocation.floor &&
+        p.location.area === currentLocation.area
+      )
+      .map(p => p.id)
+
     const record: InspectionRecord = {
       id: generateId('insp-'),
       location: { ...currentLocation },
       inspector: '当前用户',
       inspectTime: getCurrentDateTime(),
       results: [...currentResults],
-      photos: [],
+      photos: relatedPhotoIds,
       rectifications: [],
       overallStatus,
       overallStatusName: overallStatus === 'passed' ? '检查通过' : '需整改',
       remark
     }
 
-    addInspectionRecord(record)
-    
+    const rectResult = addInspectionRecord(record)
+
     Taro.showToast({
       title: overallStatus === 'passed' ? '检查通过' : '已生成整改单',
       icon: 'success'
@@ -83,6 +132,14 @@ const InspectionPage: React.FC = () => {
     setShowSummary(false)
     resetResults()
     setRemark('')
+
+    if (rectResult && rectResult.items.length > 0) {
+      setTimeout(() => {
+        Taro.switchTab({
+          url: '/pages/rectification/index'
+        })
+      }, 1500)
+    }
   }
 
   const handleReset = () => {
@@ -104,7 +161,7 @@ const InspectionPage: React.FC = () => {
     })
   }
 
-  const todayRecords = inspectionRecords.filter(r => 
+  const todayRecords = inspectionRecords.filter(r =>
     r.inspectTime.startsWith(getCurrentDateTime().split(' ')[0])
   )
 
@@ -169,16 +226,6 @@ const InspectionPage: React.FC = () => {
                   value={remark}
                   onInput={(e) => setRemark(e.detail.value)}
                   maxlength={500}
-                  style={{
-                    width: '100%',
-                    minHeight: '120rpx',
-                    padding: '24rpx',
-                    fontSize: '28rpx',
-                    backgroundColor: '#f5f7fa',
-                    borderRadius: '12rpx',
-                    border: '2rpx solid #e0e0e0',
-                    lineHeight: '1.5'
-                  }}
                 />
               </View>
             </View>
@@ -212,6 +259,9 @@ const InspectionPage: React.FC = () => {
                   </View>
                   <View className={styles.recentMeta}>
                     <Text className={styles.recentTime}>{record.inspectTime}</Text>
+                    {record.rectifications.length > 0 && (
+                      <Text className={styles.rectCount}>关联{record.rectifications.length}项整改</Text>
+                    )}
                   </View>
                   <View className={styles.recentResult}>
                     <Text className={`${styles.resultItem} ${styles.passed}`}>
@@ -257,7 +307,7 @@ const InspectionPage: React.FC = () => {
             <View className={styles.modalHeader}>
               <Text className={styles.modalTitle}>检查结果确认</Text>
             </View>
-            <View className={styles.modalBody}>
+            <ScrollView className={styles.modalScrollBody} scrollY>
               <View className={styles.summaryStats}>
                 <View className={`${styles.summaryStat} ${styles.passed}`}>
                   <Text className={`${styles.summaryStatValue} ${styles.passed}`}>{passedCount}</Text>
@@ -269,36 +319,111 @@ const InspectionPage: React.FC = () => {
                 </View>
               </View>
 
-              {hasSeriousIssue && (
-                <View className={styles.warningBox}>
-                  <Text className={styles.warningText}>
-                    ⚠️ 存在不合格项，将自动生成整改清单。严重不合格项将要求暂停浇筑并通知技术负责人复核。
+              {hasFailed && (
+                <View className={styles.severitySummary}>
+                  <Text className={styles.summarySubTitle}>严重程度分布</Text>
+                  <View className={styles.severityRow}>
+                    {seriousCount > 0 && (
+                      <View className={`${styles.severityBadge} ${styles.serious}`}>
+                        <Text className={styles.severityCount}>{seriousCount}</Text>
+                        <Text className={styles.severityLabel}>严重</Text>
+                      </View>
+                    )}
+                    {generalCount > 0 && (
+                      <View className={`${styles.severityBadge} ${styles.general}`}>
+                        <Text className={styles.severityCount}>{generalCount}</Text>
+                        <Text className={styles.severityLabel}>一般</Text>
+                      </View>
+                    )}
+                    {minorCount > 0 && (
+                      <View className={`${styles.severityBadge} ${styles.minor}`}>
+                        <Text className={styles.severityCount}>{minorCount}</Text>
+                        <Text className={styles.severityLabel}>轻微</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {hasSuspendIssue && (
+                <View className={styles.dangerBox}>
+                  <Text className={styles.dangerText}>
+                    🚫 检测到严重安全隐患！
+                  </Text>
+                  <Text className={styles.dangerSubtext}>
+                    {seriousCount}项检查严重超限，将要求暂停浇筑并通知技术负责人复核
                   </Text>
                 </View>
               )}
 
-              {!hasSeriousIssue && (
+              {hasFailed && !hasSuspendIssue && (
+                <View className={styles.warningBox}>
+                  <Text className={styles.warningText}>
+                    ⚠️ 存在{failedCount}项不合格项，将自动生成整改清单
+                  </Text>
+                </View>
+              )}
+
+              {!hasFailed && (
                 <View className={styles.infoBox}>
                   <Text className={styles.infoText}>
-                    ✓ 所有检查项均合格，可提交检查记录。
+                    ✓ 所有检查项均合格，可提交检查记录
                   </Text>
                 </View>
               )}
 
               {failedCount > 0 && (
                 <View className={styles.failedItems}>
-                  <Text className={styles.failedItemsTitle}>不合格项清单</Text>
-                  {currentResults.filter(r => !r.isQualified).map(item => (
-                    <View key={item.itemId} className={styles.failedItem}>
-                      <Text className={styles.failedItemName}>{item.itemName}</Text>
-                      <Text className={styles.failedItemValue}>
-                        {item.measuredValue}{item.unit}（不合格）
-                      </Text>
+                  <Text className={styles.failedItemsTitle}>不合格项详细清单</Text>
+                  {failedItemsWithSeverity.map(({ result, severity, standardName, qualifiedRange, unit }) => (
+                    <View key={result.itemId} className={styles.failedItemDetail}>
+                      <View className={styles.failedItemHeader}>
+                        <Text className={styles.failedItemName}>{standardName}</Text>
+                        <StatusTag type={severity.severity} text={severity.severityName} size='sm' />
+                      </View>
+                      <View className={styles.failedItemInfo}>
+                        <View className={styles.infoBlock}>
+                          <Text className={styles.infoBlockLabel}>实测值</Text>
+                          <Text className={`${styles.infoBlockValue} ${styles.failed}`}>
+                            {result.measuredValue}{unit}
+                          </Text>
+                        </View>
+                        <View className={styles.infoBlock}>
+                          <Text className={styles.infoBlockLabel}>合格范围</Text>
+                          <Text className={styles.infoBlockValue}>{qualifiedRange}{unit}</Text>
+                        </View>
+                        <View className={styles.infoBlock}>
+                          <Text className={styles.infoBlockLabel}>偏差</Text>
+                          <Text className={styles.infoBlockValue}>
+                            {severity.deviationValue > 0 ? `${severity.deviationValue}${unit}` : '-'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className={styles.failedItemFlags}>
+                        {severity.isSuspend && (
+                          <View className={`${styles.flag} ${styles.flagDanger}`}>
+                            <Text>🚫 暂停浇筑</Text>
+                          </View>
+                        )}
+                        {severity.needTechReview && (
+                          <View className={`${styles.flag} ${styles.flagInfo}`}>
+                            <Text>🔧 技术复核</Text>
+                          </View>
+                        )}
+                        {!severity.isSuspend && !severity.needTechReview && (
+                          <View className={`${styles.flag} ${styles.flagNormal}`}>
+                            <Text>✓ 班组整改</Text>
+                          </View>
+                        )}
+                      </View>
+                      {result.remark && (
+                        <Text className={styles.failedItemRemark}>备注：{result.remark}</Text>
+                      )}
                     </View>
                   ))}
                 </View>
               )}
-            </View>
+            </ScrollView>
             <View className={styles.modalFooter}>
               <Button
                 className={classnames(styles.modalBtn, styles.modalBtnCancel)}
@@ -309,11 +434,11 @@ const InspectionPage: React.FC = () => {
               <Button
                 className={classnames(
                   styles.modalBtn,
-                  hasSeriousIssue ? styles.modalBtnDanger : styles.modalBtnConfirm
+                  hasSuspendIssue ? styles.modalBtnDanger : hasFailed ? styles.modalBtnWarning : styles.modalBtnConfirm
                 )}
                 onClick={handleConfirmSubmit}
               >
-                {hasSeriousIssue ? '确认并生成整改单' : '确认提交'}
+                {hasSuspendIssue ? '确认并暂停浇筑' : hasFailed ? '确认并生成整改单' : '确认提交'}
               </Button>
             </View>
           </View>
