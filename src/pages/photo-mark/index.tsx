@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { View, Text, Image, Input, Textarea, Button, Picker } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import classnames from 'classnames'
@@ -7,6 +7,29 @@ import { PhotoMark, Location, RectificationItem } from '@/types'
 import { photoCategories, buildingOptions, floorOptions, areaOptions } from '@/data/inspectionItems'
 import { generateId, getCurrentDateTime, getLocationText } from '@/utils'
 import styles from './index.module.scss'
+
+interface ImageLayout {
+  width: number
+  height: number
+  offsetLeft: number
+  offsetTop: number
+}
+
+function useMemoOne<T>(factory: () => T, deps: any[]): T {
+  const [value, setValue] = useState<T>(factory())
+  const [prevDeps, setPrevDeps] = useState<any[]>(deps)
+
+  const depsChanged = deps.length !== prevDeps.length || deps.some((d, i) => d !== prevDeps[i])
+
+  if (depsChanged) {
+    const newValue = factory()
+    setValue(newValue)
+    setPrevDeps(deps)
+    return newValue
+  }
+
+  return value
+}
 
 const PhotoMarkPage: React.FC = () => {
   const router = useRouter()
@@ -19,7 +42,7 @@ const PhotoMarkPage: React.FC = () => {
     updateRectificationItem
   } = useInspection()
 
-  const tempPath = router.params.tempPath || ''
+  const tempPath = decodeURIComponent(router.params.tempPath || '')
   const fromInspectionId = router.params.inspectionId || ''
   const fromRectificationId = router.params.rectificationId || ''
   const fromItemId = router.params.itemId || ''
@@ -33,9 +56,10 @@ const PhotoMarkPage: React.FC = () => {
   const [linkInspectionId, setLinkInspectionId] = useState<string>('')
   const [linkRectificationId, setLinkRectificationId] = useState<string>('')
   const [linkItemId, setLinkItemId] = useState<string>('')
+  const [imageLayout, setImageLayout] = useState<ImageLayout | null>(null)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
-  const imageWrapperRef = useRef<any>(null)
-  const [imageLayout, setImageLayout] = useState({ width: 0, height: 0, offsetX: 0, offsetY: 0 })
+  const imageContainerRef = useRef<any>(null)
 
   useEffect(() => {
     if (currentLocation.building || currentLocation.floor || currentLocation.area) {
@@ -58,7 +82,7 @@ const PhotoMarkPage: React.FC = () => {
     }
   }, [currentLocation, fromInspectionId, fromRectificationId, fromItemId, getCurrentInspectionId, rectificationItems])
 
-  const linkedInspectionInfo = useMemo(() => {
+  const linkedInspectionInfo = useMemoOne(() => {
     if (!linkInspectionId) return null
     const rec = inspectionRecords.find(r => r.id === linkInspectionId)
     return rec ? {
@@ -68,7 +92,7 @@ const PhotoMarkPage: React.FC = () => {
     } : null
   }, [linkInspectionId, inspectionRecords])
 
-  const linkedRectInfo = useMemo(() => {
+  const linkedRectInfo = useMemoOne(() => {
     if (!linkRectificationId) return null
     const rect = rectificationItems.find(r => r.id === linkRectificationId)
     return rect ? {
@@ -78,32 +102,56 @@ const PhotoMarkPage: React.FC = () => {
     } : null
   }, [linkRectificationId, rectificationItems])
 
-  const availableRectifications = useMemo(() => {
+  const availableRectifications = useMemoOne(() => {
     if (!linkInspectionId) return rectificationItems.filter(r => r.status === 'pending' || r.status === 'processing')
     return rectificationItems.filter(r => r.inspectionId === linkInspectionId)
   }, [linkInspectionId, rectificationItems])
 
-  const handleImageLayout = useCallback((e: any) => {
-    const { width, height, left, top } = e.detail || {}
-    if (width && height) {
-      setImageLayout({ width, height, offsetX: left || 0, offsetY: top || 0 })
-    }
+  const updateImageLayout = useCallback(() => {
+    if (!imageContainerRef.current) return
+
+    const query = Taro.createSelectorQuery()
+    query.select('.image-container').boundingClientRect()
+    query.exec((res) => {
+      if (res && res[0]) {
+        setImageLayout({
+          width: res[0].width,
+          height: res[0].height,
+          offsetLeft: res[0].left,
+          offsetTop: res[0].top
+        })
+        setImageLoaded(true)
+      }
+    })
   }, [])
 
-  const handleImageTap = useCallback((e: any) => {
-    if (!isAddingMark) return
+  const handleImageLoad = useCallback(() => {
+    setTimeout(updateImageLayout, 100)
+  }, [updateImageLayout])
 
-    const tapX = e.detail?.x ?? e.detail?.clientX ?? 0
-    const tapY = e.detail?.y ?? e.detail?.clientY ?? 0
+  useEffect(() => {
+    const timer = setTimeout(updateImageLayout, 300)
+    return () => clearTimeout(timer)
+  }, [updateImageLayout])
 
-    const { width, height, offsetX, offsetY } = imageLayout
-    const containerWidth = width || 375
-    const containerHeight = height || 500
+  const handleTouchStart = useCallback((e: any) => {
+    if (!isAddingMark || !imageLayout) return
 
-    const relativeX = tapX - offsetX
-    const relativeY = tapY - offsetY
-    const xPercent = Math.max(5, Math.min(95, (relativeX / containerWidth) * 100))
-    const yPercent = Math.max(5, Math.min(95, (relativeY / containerHeight) * 100))
+    const touch = e.touches?.[0] || e.changedTouches?.[0]
+    if (!touch) return
+
+    const clientX = touch.clientX
+    const clientY = touch.clientY
+
+    const relativeX = clientX - imageLayout.offsetLeft
+    const relativeY = clientY - imageLayout.offsetTop
+
+    if (relativeX < 0 || relativeX > imageLayout.width || relativeY < 0 || relativeY > imageLayout.height) {
+      return
+    }
+
+    const xPercent = Math.max(5, Math.min(95, (relativeX / imageLayout.width) * 100))
+    const yPercent = Math.max(5, Math.min(95, (relativeY / imageLayout.height) * 100))
 
     if (currentMarkText.trim()) {
       const newMark: PhotoMark = {
@@ -119,7 +167,7 @@ const PhotoMarkPage: React.FC = () => {
     } else {
       Taro.showToast({ title: '请先输入标注内容', icon: 'none' })
     }
-  }, [isAddingMark, currentMarkText, imageLayout])
+  }, [isAddingMark, imageLayout, currentMarkText])
 
   const handleDeleteMark = (markId: string) => {
     Taro.showModal({
@@ -200,16 +248,16 @@ const PhotoMarkPage: React.FC = () => {
   return (
     <View className={styles.page}>
       <View
-        className={styles.imageContainer}
-        ref={imageWrapperRef}
+        className={`${styles.imageContainer} image-container`}
+        ref={imageContainerRef}
+        onTouchStart={handleTouchStart}
       >
         {tempPath ? (
           <Image
             className={styles.image}
             src={tempPath}
             mode='widthFix'
-            onLoad={handleImageLayout}
-            onClick={handleImageTap}
+            onLoad={handleImageLoad}
           />
         ) : (
           <View className={styles.noPhoto}>
@@ -222,7 +270,6 @@ const PhotoMarkPage: React.FC = () => {
             <View
               className={styles.markDot}
               style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-              onClick={(e) => { e.stopPropagation() }}
             >
               <Text className={styles.markIndex}>{index + 1}</Text>
             </View>
@@ -233,7 +280,6 @@ const PhotoMarkPage: React.FC = () => {
                 top: `${mark.y}%`,
                 transform: mark.x > 60 ? 'translate(-100%, -160%)' : 'translate(10%, -160%)'
               }}
-              onClick={(e) => { e.stopPropagation() }}
             >
               <Text className={styles.markLabelText}>{index + 1}. {mark.text}</Text>
               <Text
@@ -250,7 +296,7 @@ const PhotoMarkPage: React.FC = () => {
         ))}
         {isAddingMark && (
           <View className={styles.hintBar}>
-            <Text className={styles.hintText}>👆 点击图片上问题位置添加标注</Text>
+            <Text className={styles.hintText}>👆 点击图片上问题位置添加标注（{imageLoaded ? '' : '等待图片加载...'}）</Text>
           </View>
         )}
       </View>

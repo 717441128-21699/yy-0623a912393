@@ -291,58 +291,17 @@
 
 .photosGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-sm;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
 }
 
 .photoItem {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
   border-radius: $radius-sm;
   overflow: hidden;
 
   &:active {
-    opacity: 0.9;
+    opacity: 0.95;
   }
-}
-
-.photoThumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.marksBadge {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  background-color: $color-error;
-  color: $color-text-white;
-  min-width: 40rpx;
-  height: 40rpx;
-  border-radius: $radius-round;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20rpx;
-  font-weight: $font-weight-bold;
-  padding: 0 8rpx;
-}
-
-.photoCategory {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%);
-  padding: 16rpx 8rpx 8rpx;
-}
-
-.photoCategory :global {
-  font-size: 20rpx;
-  color: $color-text-white;
-  font-weight: $font-weight-medium;
 }
 
 .bottomBar {

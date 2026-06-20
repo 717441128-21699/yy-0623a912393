@@ -23,6 +23,8 @@ interface InspectionContextType {
   currentResults: InspectionResult[]
   updateResult: (result: InspectionResult) => void
   resetResults: () => void
+  currentInspectionPhotoIds: string[]
+  addPhotoToCurrentInspection: (photoId: string) => void
   inspectionRecords: InspectionRecord[]
   addInspectionRecord: (record: InspectionRecord) => RectificationGenerateResult | null
   photoRecords: PhotoRecord[]
@@ -71,6 +73,7 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
 
   const [currentResults, setCurrentResults] = useState<InspectionResult[]>([])
   const [currentInspectionId, setCurrentInspectionIdState] = useState<string | null>(null)
+  const [currentInspectionPhotoIds, setCurrentInspectionPhotoIds] = useState<string[]>([])
 
   const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>([])
   const [photoRecords, setPhotoRecords] = useState<PhotoRecord[]>([])
@@ -129,6 +132,14 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
     setCurrentResults([])
     setCurrentLocation({ building: '', floor: '', area: '' })
     setCurrentInspectionIdState(null)
+    setCurrentInspectionPhotoIds([])
+  }, [])
+
+  const addPhotoToCurrentInspection = useCallback((photoId: string) => {
+    setCurrentInspectionPhotoIds(prev => {
+      if (prev.includes(photoId)) return prev
+      return [...prev, photoId]
+    })
   }, [])
 
   const generateRectifications = useCallback((
@@ -210,6 +221,8 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
   const addInspectionRecord = useCallback((record: InspectionRecord): RectificationGenerateResult | null => {
     const failedItems = record.results.filter(r => !r.isQualified)
 
+    const finalPhotoIds = [...currentInspectionPhotoIds]
+
     let rectResult: RectificationGenerateResult | null = null
 
     if (failedItems.length > 0) {
@@ -217,7 +230,7 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
         record.id,
         record.results,
         record.location,
-        record.photos
+        finalPhotoIds
       )
 
       const newRectItems = rectResult.items
@@ -225,23 +238,32 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
 
       const updatedRecord: InspectionRecord = {
         ...record,
+        photos: finalPhotoIds,
         rectifications: rectIds
       }
 
       setInspectionRecords(prev => [updatedRecord, ...prev])
       setRectificationItems(prev => [...newRectItems, ...prev])
     } else {
-      setInspectionRecords(prev => [record, ...prev])
+      const finalRecord: InspectionRecord = {
+        ...record,
+        photos: finalPhotoIds
+      }
+      setInspectionRecords(prev => [finalRecord, ...prev])
     }
 
     setCurrentInspectionIdState(record.id)
 
     return rectResult
-  }, [generateRectifications])
+  }, [generateRectifications, currentInspectionPhotoIds])
 
   const addPhotoRecord = useCallback((photo: PhotoRecord) => {
     setPhotoRecords(prev => [photo, ...prev])
-  }, [])
+    const inInspectionProcess = currentResults.length > 0 || currentInspectionId || photo.inspectionId
+    if (inInspectionProcess) {
+      addPhotoToCurrentInspection(photo.id)
+    }
+  }, [currentResults.length, currentInspectionId, addPhotoToCurrentInspection])
 
   const updatePhotoRecord = useCallback((photo: PhotoRecord) => {
     setPhotoRecords(prev => {
@@ -306,6 +328,8 @@ export const InspectionProvider: React.FC<InspectionProviderProps> = ({ children
         currentResults,
         updateResult,
         resetResults,
+        currentInspectionPhotoIds,
+        addPhotoToCurrentInspection,
         inspectionRecords,
         addInspectionRecord,
         photoRecords,

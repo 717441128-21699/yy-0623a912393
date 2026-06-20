@@ -31,7 +31,7 @@ const RectificationDetailPage: React.FC = () => {
       return getPhotosByIds(photoIds)
     }
     return []
-  }, [item, getPhotosByIds])
+  }, [item, getPhotosByIds, photoRecords])
 
   useEffect(() => {
     const id = router.params.id

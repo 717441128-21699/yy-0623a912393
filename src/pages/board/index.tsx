@@ -5,6 +5,7 @@ import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
 import { RectificationItem, InspectionRecord, PhotoRecord } from '@/types'
 import StatusTag from '@/components/StatusTag'
+import AnnotatedPhoto from '@/components/AnnotatedPhoto'
 import { getLocationText, formatDateTime } from '@/utils'
 import { buildingOptions, floorOptions } from '@/data/inspectionItems'
 import styles from './index.module.scss'
@@ -19,6 +20,7 @@ interface TimelineEvent {
   statusType?: string
   relatedId?: string
   rectItemId?: string
+  photoId?: string
 }
 
 const BoardPage: React.FC = () => {
@@ -35,6 +37,7 @@ const BoardPage: React.FC = () => {
   const [suspendFilter, setSuspendFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
+  const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
 
   const buildingFilterOptions = ['全部楼栋', ...buildingOptions.map(b => b.label)]
   const floorFilterOptions = ['全部楼层', ...floorOptions.map(f => f.label)]
@@ -92,7 +95,8 @@ const BoardPage: React.FC = () => {
           ? `${photo.marks.length}处标注：${photo.marks.map(m => m.text).join('、')}`
           : (photo.description || '现场取证照片'),
         relatedId: item.id,
-        rectItemId: item.id
+        rectItemId: item.id,
+        photoId: photo.id
       })
     })
 
@@ -144,6 +148,23 @@ const BoardPage: React.FC = () => {
 
   const handleViewRectification = (id: string) => {
     Taro.navigateTo({ url: `/pages/rectification-detail/index?id=${id}` })
+  }
+
+  const handleViewPhoto = (photoId: string) => {
+    const photo = photoRecords.find(p => p.id === photoId)
+    if (photo) {
+      setViewingPhoto(viewingPhoto?.id === photoId ? null : photo)
+    }
+  }
+
+  const handleEventClick = (event: TimelineEvent) => {
+    if (event.type === 'photo' && event.photoId) {
+      handleViewPhoto(event.photoId)
+    } else if (event.type === 'inspection' && event.relatedId) {
+      handleViewInspection(event.relatedId)
+    } else if ((event.type === 'rectification' || event.type === 'review') && event.rectItemId) {
+      handleViewRectification(event.rectItemId)
+    }
   }
 
   const getEventIcon = (type: TimelineEvent['type']) => {
@@ -301,7 +322,11 @@ const BoardPage: React.FC = () => {
                   {isExpanded && (
                     <View className={styles.timelineContent}>
                       {timeline.map((event, index) => (
-                        <View key={event.id} className={styles.timelineEvent}>
+                        <View
+                          key={event.id}
+                          className={classnames(styles.timelineEvent, styles.clickable)}
+                          onClick={() => handleEventClick(event)}
+                        >
                           <View className={styles.timelineLine}>
                             <View className={classnames(styles.timelineDot, getEventColor(event.type))}>
                               <Text className={styles.dotIcon}>{getEventIcon(event.type)}</Text>
@@ -321,22 +346,9 @@ const BoardPage: React.FC = () => {
                             </View>
                             <Text className={styles.timelineDetail}>{event.detail}</Text>
                             <Text className={styles.timelineTime}>{formatDateTime(event.time)}</Text>
-                            {event.type === 'inspection' && event.relatedId && (
-                              <Button
-                                className={styles.linkBtn}
-                                onClick={() => handleViewInspection(event.relatedId!)}
-                              >
-                                查看检查记录 →
-                              </Button>
-                            )}
-                            {(event.type === 'rectification' || event.type === 'review') && event.rectItemId && (
-                              <Button
-                                className={styles.linkBtn}
-                                onClick={() => handleViewRectification(event.rectItemId!)}
-                              >
-                                查看整改详情 →
-                              </Button>
-                            )}
+                            <Text className={styles.clickHint}>
+                              {event.type === 'photo' ? '📷 点击查看原图' : '→ 点击查看详情'}
+                            </Text>
                           </View>
                         </View>
                       ))}
@@ -348,6 +360,49 @@ const BoardPage: React.FC = () => {
           </View>
         )}
       </View>
+
+      {viewingPhoto && (
+        <View className={styles.photoModalOverlay} onClick={() => setViewingPhoto(null)}>
+          <View className={styles.photoModalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.photoModalHeader}>
+              <Text className={styles.photoModalTitle}>照片详情</Text>
+              <Button className={styles.photoModalClose} onClick={() => setViewingPhoto(null)}>
+                ✕
+              </Button>
+            </View>
+            <ScrollView className={styles.photoModalBody} scrollY>
+              <AnnotatedPhoto
+                photo={viewingPhoto}
+                mode='full'
+                showMarks={true}
+                showMeta={true}
+              />
+            </ScrollView>
+            <View className={styles.photoModalFooter}>
+              <View className={styles.photoInfo}>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>位置</Text>
+                  <Text className={styles.photoInfoValue}>{getLocationText(viewingPhoto.location)}</Text>
+                </View>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>分类</Text>
+                  <Text className={styles.photoInfoValue}>{viewingPhoto.categoryName}</Text>
+                </View>
+                <View className={styles.photoInfoRow}>
+                  <Text className={styles.photoInfoLabel}>拍摄时间</Text>
+                  <Text className={styles.photoInfoValue}>{formatDateTime(viewingPhoto.createTime)}</Text>
+                </View>
+                {viewingPhoto.description && (
+                  <View className={styles.photoInfoRow}>
+                    <Text className={styles.photoInfoLabel}>描述</Text>
+                    <Text className={styles.photoInfoValue}>{viewingPhoto.description}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   )
 }

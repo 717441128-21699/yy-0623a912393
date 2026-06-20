@@ -81,7 +81,7 @@ export interface InspectionRecord {
   inspector: string
   inspectTime: string
   results: InspectionResult[]
-  photos: PhotoRecord[]
+  photos: string[]
   rectifications: string[]
   overallStatus: 'passed' | 'failed' | 'pending'
   overallStatusName: string

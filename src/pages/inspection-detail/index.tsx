@@ -5,6 +5,7 @@ import classnames from 'classnames'
 import { useInspection } from '@/store/InspectionContext'
 import { InspectionRecord, RectificationItem, PhotoRecord } from '@/types'
 import StatusTag from '@/components/StatusTag'
+import AnnotatedPhoto from '@/components/AnnotatedPhoto'
 import { getLocationText, formatDateTime } from '@/utils'
 import styles from './index.module.scss'
 
@@ -28,7 +29,7 @@ const InspectionDetailPage: React.FC = () => {
       if (found) {
         setRecord(found)
         setRelatedRectifications(getRectificationsByInspection(id))
-        setRelatedPhotos(getPhotosByInspection(id))
+        setRelatedPhotos(getPhotosByIds(found.photos))
       } else {
         Taro.showToast({
           title: '记录不存在',
@@ -36,7 +37,7 @@ const InspectionDetailPage: React.FC = () => {
         })
       }
     }
-  }, [router.params.id, inspectionRecords, getRectificationsByInspection, getPhotosByInspection, rectificationItems])
+  }, [router.params.id, inspectionRecords, getRectificationsByInspection, getPhotosByIds, rectificationItems])
 
   const handleViewRectification = (item: RectificationItem) => {
     Taro.navigateTo({
@@ -44,11 +45,10 @@ const InspectionDetailPage: React.FC = () => {
     })
   }
 
+  const [viewingPhoto, setViewingPhoto] = useState<PhotoRecord | null>(null)
+
   const handleViewPhoto = (photo: PhotoRecord) => {
-    Taro.previewImage({
-      urls: [photo.url],
-      current: photo.url
-    })
+    setViewingPhoto(viewingPhoto?.id === photo.id ? null : photo)
   }
 
   if (!record) {
@@ -111,20 +111,14 @@ const InspectionDetailPage: React.FC = () => {
             <Text className={styles.sectionTitle}>现场照片（{relatedPhotos.length}张）</Text>
             <View className={styles.photosGrid}>
               {relatedPhotos.map(photo => (
-                <View key={photo.id} className={styles.photoItem} onClick={() => handleViewPhoto(photo)}>
-                  <Image
-                    className={styles.photoThumb}
-                    src={photo.thumbnail || photo.url}
-                    mode='aspectFill'
+                <View key={photo.id} className={styles.photoItem}>
+                  <AnnotatedPhoto
+                    photo={photo}
+                    mode={viewingPhoto?.id === photo.id ? 'full' : 'thumb'}
+                    showMarks={true}
+                    showMeta={true}
+                    onClick={() => handleViewPhoto(photo)}
                   />
-                  {photo.marks.length > 0 && (
-                    <View className={styles.marksBadge}>
-                      <Text>{photo.marks.length}</Text>
-                    </View>
-                  )}
-                  <View className={styles.photoCategory}>
-                    <Text>{photo.categoryName}</Text>
-                  </View>
                 </View>
               ))}
             </View>
